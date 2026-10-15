@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智光商工 一年仁班 · 班級清潔打掃戰情室 | 衛生股長專用系統</title>
+  <meta name="description" content="新北市私立智光高級商工職業學校一年仁班班級打掃管理系統，包含責任分區檢核表、值日生自動輪值、放學打掃倒數計時器、命運轉盤與垃圾分類規範。">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="light">
+  <!-- Background Canvas for Confetti -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <div id="appRoot" class="app-layout">
+    <!-- Top Global Navigation Bar -->
+    <header class="top-nav">
+      <div class="nav-brand">
+        <div class="school-crest">
+          <span class="crest-icon">🏫</span>
+          <span class="crest-badge">CKVS</span>
+        </div>
+        <div class="brand-titles">
+          <div class="brand-sub">新北市私立智光高級商工職業學校</div>
+          <h1 class="brand-main">一年仁班 · 整潔作戰指揮部 <span class="tag-role">衛生股長專用版</span></h1>
+        </div>
+      </div>
+
+      <!-- Live Info & Quick Controls -->
+      <div class="nav-controls">
+        <div class="today-badge" id="liveDateDisplay">
+          <span class="icon">📅</span>
+          <span class="text">載入中...</span>
+        </div>
+
+        <!-- Quick Sound Toggle -->
+        <button id="soundToggleBtn" class="control-btn" title="開關音效 (Web Audio)" aria-label="開關音效">
+          <span class="btn-icon">🔊</span>
+          <span class="btn-label">音效開</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="control-btn" title="切換明亮/深色模式" aria-label="切換外觀主題">
+          <span class="btn-icon">🌙</span>
+          <span class="btn-label">深色</span>
+        </button>
+
+        <!-- Projector / Smartboard Mode Toggle -->
+        <button id="projectorModeBtn" class="control-btn btn-highlight" title="開啟黑板大螢幕投影模式" aria-label="投影模式">
+          <span class="btn-icon">📺</span>
+          <span class="btn-label">投影全螢幕</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="main-tabs" aria-label="主要功能選單">
+      <button class="tab-btn active" data-tab="tabDashboard">
+        <span class="tab-icon">📊</span>
+        <span class="tab-text">清潔戰情看板</span>
+      </button>
+      <button class="tab-btn" data-tab="tabZones">
+        <span class="tab-icon">🧹</span>
+        <span class="tab-text">責任分區與驗收</span>
+        <span class="badge-count" id="pendingVerifyCount">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tabRoster">
+        <span class="tab-icon">👥</span>
+        <span class="tab-text">值日生輪值名冊</span>
+      </button>
+      <button class="tab-btn" data-tab="tabWheel">
+        <span class="tab-icon">🎯</span>
+        <span class="tab-text">命運抽籤轉盤</span>
+      </button>
+      <button class="tab-btn" data-tab="tabRecycleGuide">
+        <span class="tab-icon">♻️</span>
+        <span class="tab-text">垃圾分類圖鑑</span>
+      </button>
+      <button class="tab-btn" data-tab="tabHistory">
+        <span class="tab-icon">🏆</span>
+        <span class="tab-text">整潔競賽紀錄</span>
+      </button>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="main-content">
+
+      <!-- ============================================== -->
+      <!-- TAB 1: DASHBOARD (戰情總覽看板) -->
+      <!-- ============================================== -->
+      <section id="tabDashboard" class="tab-panel active">
+        <!-- Hero Banner with Illustration -->
+        <div class="hero-banner">
+          <div class="hero-content">
+            <div class="hero-pill">
+              <span class="pulse-dot"></span> 智光商工 一年仁班 · 今日打掃作戰任務中
+            </div>
+            <h2 class="hero-title">全員出動！爭取本週全校整潔競賽第一名</h2>
+            <p class="hero-subtitle">衛生股長溫馨提醒：桌椅切齊地面十字線，窗框滑軌溝槽與黑板槽要用抹布仔細擦拭！</p>
+            
+            <div class="hero-actions">
+              <button class="btn btn-primary" id="heroStartTimerBtn">
+                <span class="btn-icon">⏱️</span> 啟動 15 分鐘放學打掃倒數
+              </button>
+              <button class="btn btn-secondary" id="heroGoVerifyBtn">
+                <span class="btn-icon">✅</span> 開始股長驗收檢查
+              </button>
+              <button class="btn btn-outline" id="heroDrawLuckyBtn">
+                <span class="btn-icon">🎲</span> 抽今日公差倒廚餘
+              </button>
+            </div>
+          </div>
+          <div class="hero-media">
+            <div class="hero-vector-badge">
+              <div class="badge-glow-ring"></div>
+              <svg class="hero-svg-icon" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="整潔作戰徽章向量圖">
+                <!-- Outer decorative circle -->
+                <circle cx="100" cy="100" r="90" stroke="url(#badgeGrad)" stroke-width="4" stroke-dasharray="6 6" class="spin-slow" />
+                <circle cx="100" cy="100" r="78" fill="url(#circleBgGrad)" />
+                <!-- Center Shield -->
+                <path d="M100 35L150 55V105C150 138 128 162 100 172C72 162 50 138 50 105V55L100 35Z" fill="url(#shieldGrad)" filter="url(#shieldGlow)" />
+                <!-- Broom and Sparkle Icon -->
+                <path d="M82 135L125 75M125 75L132 80M125 75L118 70M72 145C68 140 70 132 76 130L88 125L92 140L80 148C76 150 72 148 72 145Z" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                <path d="M100 70L103 82L115 85L103 88L100 100L97 88L85 85L97 82L100 70Z" fill="#FDE047" class="sparkle-anim" />
+                <path d="M140 105L142 112L149 114L142 116L140 123L138 116L131 114L138 112L140 105Z" fill="#FEF08A" class="sparkle-anim-delayed" />
+                <!-- Gradients -->
+                <defs>
+                  <linearGradient id="badgeGrad" x1="10" y1="10" x2="190" y2="190" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#10B981" />
+                    <stop offset="0.5" stop-color="#06B6D4" />
+                    <stop offset="1" stop-color="#6366F1" />
+                  </linearGradient>
+                  <linearGradient id="circleBgGrad" x1="100" y1="22" x2="100" y2="178" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#ECFDF5" />
+                    <stop offset="1" stop-color="#D1FAE5" />
+                  </linearGradient>
+                  <linearGradient id="shieldGrad" x1="50" y1="35" x2="150" y2="172" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#059669" />
+                    <stop offset="1" stop-color="#047857" />
+                  </linearGradient>
+                  <filter id="shieldGlow" x="40" y="25" width="120" height="160" filterUnits="userSpaceOnUse">
+                    <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#059669" flood-opacity="0.3" />
+                  </filter>
+                </defs>
+              </svg>
+              
+              <div class="hero-media-badge">
+                <span class="badge-icon">🎖️</span>
+                <div class="badge-text">
+                  <strong>智光整潔第一名</strong>
+                  <span>一仁衛生股長督導小隊</span>
+                </div>
+              </div>
+
+              <!-- Floating Micro Tags -->
+              <div class="float-tag tag-top">✨ 教室地板零紙屑</div>
+              <div class="float-tag tag-bottom">♻️ 資源分類落實 100%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">今日整體清潔進度</span>
+              <span class="kpi-icon">📈</span>
+            </div>
+            <div class="kpi-body">
+              <div class="progress-ring-wrap">
+                <svg class="progress-ring" width="84" height="84">
+                  <circle class="progress-ring-bg" stroke="currentColor" stroke-width="7" fill="transparent" r="35" cx="42" cy="42"/>
+                  <circle class="progress-ring-bar" id="kpiProgressRing" stroke="var(--primary)" stroke-width="7" stroke-dasharray="220" stroke-dashoffset="220" stroke-linecap="round" fill="transparent" r="35" cx="42" cy="42"/>
+                </svg>
+                <span class="ring-text" id="kpiOverallPercent">0%</span>
+              </div>
+              <div class="kpi-meta">
+                <div class="kpi-number" id="kpiProgressRatio">0 / 6 區完成</div>
+                <div class="kpi-sub" id="kpiProgressStatus">打掃尚未開始</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">今日整潔評定等級</span>
+              <span class="kpi-icon">⭐</span>
+            </div>
+            <div class="kpi-body">
+              <div class="rating-display">
+                <span class="rating-rank" id="kpiRatingRank">優等</span>
+                <span class="rating-score" id="kpiRatingScore">98 <small>分</small></span>
+              </div>
+              <div class="kpi-meta">
+                <div class="kpi-sub">全班標準 85 分以上即達標</div>
+                <div class="rating-stars" id="kpiRatingStars">★★★★★</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-title">今日當值同學人數</span>
+              <span class="kpi-icon">👷</span>
+            </div>
+            <div class="kpi-body">
+              <div class="big-metric" id="kpiDutyCount">18 <small>人</small></div>
+              <div class="kpi-meta">
+                <div class="kpi-sub">一仁在籍共 <span id="kpiTotalStudentCount">36</span> 位同學</div>
+                <div class="kpi-tag-list" id="kpiActiveDutyBrief">講台、地坪、門窗、走廊、外掃、回收</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Timer Mini Card -->
+          <div class="kpi-card kpi-timer-card">
+            <div class="kpi-header">
+              <span class="kpi-title">放學打掃即時倒數</span>
+              <span class="timer-mode-tag" id="timerModeLabel">15分鐘標準模式</span>
+            </div>
+            <div class="mini-timer-display" id="miniTimerDisplay">15:00</div>
+            <div class="mini-timer-controls">
+              <button class="btn btn-sm btn-primary" id="miniTimerToggleBtn">
+                <span id="miniTimerBtnIcon">▶️</span> <span id="miniTimerBtnText">開始計時</span>
+              </button>
+              <button class="btn btn-sm btn-ghost" id="miniTimerResetBtn" title="重設時間">🔄 重設</button>
+              <button class="btn btn-sm btn-ghost" id="openTimerModalBtn" title="全螢幕計時器">⛶ 放大</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Announcement Bulletin & Quick Zone Status Row -->
+        <div class="dashboard-split-row">
+          <!-- Bulletin Board -->
+          <div class="card bulletin-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">📢</span>
+                <h3 class="card-title">衛生股長每日廣播佈告欄</h3>
+              </div>
+              <button class="btn btn-sm btn-outline" id="editBulletinBtn">✏️ 編輯公告</button>
+            </div>
+            <div class="card-body">
+              <div class="bulletin-message" id="bulletinMessageText">
+                各位一仁的同學大家好！今天是本週衛生整潔重點複評日。請各負責區域同學於鐘響後立即就位。特別注意：<strong>外掃區落葉務必裝入指定綠色大垃圾袋</strong>；<strong>走廊拖把請洗乾淨擰乾、夾好晾曬</strong>。打掃完成後請各區負責人至講台找衛生股長驗收蓋章！感謝大家的努力，一仁必得第一！💪
+              </div>
+              <div class="bulletin-meta">
+                <span class="officer-badge">🎖️ 發布者：一年仁班 衛生股長</span>
+                <span class="bulletin-time" id="bulletinTimestamp">本日最新發布</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Zone Overview Table -->
+          <div class="card quick-zones-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">📋</span>
+                <h3 class="card-title">今日 6 大責任分區即時驗收狀態</h3>
+              </div>
+              <button class="btn btn-sm btn-primary" id="jumpToZonesBtn">深入檢核 ➔</button>
+            </div>
+            <div class="card-body">
+              <div class="zone-quick-list" id="zoneQuickList">
+                <!-- Injected via JavaScript -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 2: ZONES & VERIFICATION (責任分區與驗收) -->
+      <!-- ============================================== -->
+      <section id="tabZones" class="tab-panel">
+        <div class="section-header-bar">
+          <div>
+            <h2 class="section-title">班級打掃責任分區與標準檢核表</h2>
+            <p class="section-desc">點選項目進行打勾檢驗，達到 100% 即可由衛生股長施蓋「查核合格」官方驗收章。</p>
+          </div>
+          <div class="header-action-group">
+            <button class="btn btn-outline" id="resetAllChecklistsBtn">
+              <span>🔄</span> 重設今日檢核表
+            </button>
+            <button class="btn btn-primary" id="verifyAllQuickBtn">
+              <span>🌟</span> 全區一鍵驗收
+            </button>
+          </div>
+        </div>
+
+        <!-- Zone Filter Tabs -->
+        <div class="zone-filter-tabs" id="zoneFilterTabs">
+          <button class="filter-chip active" data-filter="all">全部區域 (6)</button>
+          <button class="filter-chip" data-filter="indoor">教室室內 (4)</button>
+          <button class="filter-chip" data-filter="outdoor">外掃與公共區 (2)</button>
+          <button class="filter-chip" data-filter="pending">待驗收/未完成 (<span id="filterPendingCount">0</span>)</button>
+        </div>
+
+        <!-- Zones Cards Grid -->
+        <div class="zones-grid" id="zonesCardsGrid">
+          <!-- Dynamically populated by app.js -->
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 3: ROSTER (值日生輪值名冊) -->
+      <!-- ============================================== -->
+      <section id="tabRoster" class="tab-panel">
+        <div class="section-header-bar">
+          <div>
+            <h2 class="section-title">智光一仁 · 班級學生座號與清潔輪值總表</h2>
+            <p class="section-desc">支援即時更換負責人、每週智慧輪替、名冊編輯，以及一鍵複製班級群組排班文字。</p>
+          </div>
+          <div class="header-action-group">
+            <button class="btn btn-outline" id="copyRosterTextBtn">
+              <span>📋</span> 複製排班文字 (LINE格式)
+            </button>
+            <button class="btn btn-outline" id="printRosterBtn">
+              <span>🖨️</span> 列印輪值表
+            </button>
+            <button class="btn btn-primary" id="rotateRosterBtn">
+              <span>🔄</span> 每週名單順時鐘輪替
+            </button>
+          </div>
+        </div>
+
+        <!-- Zone Roster Assignment Cards -->
+        <div class="roster-assignment-grid" id="rosterAssignmentGrid">
+          <!-- Dynamic Assignment Cards -->
+        </div>
+
+        <!-- Student Database Management Drawer/Section -->
+        <div class="card student-manager-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-icon">📝</span>
+              <h3 class="card-title">一仁全班名冊管理庫 (<span id="studentCountLabel">36</span>人)</h3>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-sm btn-outline" id="addNewStudentBtn">➕ 新增座號學生</button>
+              <button class="btn btn-sm btn-ghost text-danger" id="resetRosterToDefaultBtn">重置為智光一仁預設名冊</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="student-search-bar">
+              <input type="text" id="studentSearchInput" placeholder="🔍 搜尋座號或學生姓名..." class="search-input">
+              <span class="search-hint">點擊任一位學生標籤即可指派或快速抽籤</span>
+            </div>
+            <div class="student-pill-pool" id="studentPillPool">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 4: LUCKY WHEEL (命運抽籤轉盤) -->
+      <!-- ============================================== -->
+      <section id="tabWheel" class="tab-panel">
+        <div class="section-header-bar">
+          <div>
+            <h2 class="section-title">班級打掃命運轉盤 & 幸運抽籤機</h2>
+            <p class="section-desc">今天誰去倒廚餘？誰去扛大垃圾袋？誰留下來陪股長總檢核？公平公正公開，轉盤說了算！</p>
+          </div>
+        </div>
+
+        <div class="wheel-section-layout">
+          <!-- Left: Canvas Wheel & Spin Controls -->
+          <div class="wheel-stage-card card">
+            <div class="wheel-container">
+              <div class="wheel-pointer">▼</div>
+              <canvas id="wheelCanvas" width="460" height="460"></canvas>
+            </div>
+            <div class="wheel-actions">
+              <button class="btn btn-lg btn-primary btn-spin" id="spinWheelBtn">
+                <span class="btn-icon">🎡</span>
+                <span class="btn-text">開始轉動命運之輪！</span>
+              </button>
+              <button class="btn btn-outline" id="quickDrawSingleBtn">
+                <span>⚡</span> 快速隨機抽取一人
+              </button>
+            </div>
+            <!-- Winner Announcement Alert Box -->
+            <div class="winner-box hidden" id="winnerBox">
+              <div class="winner-trophy">🎉</div>
+              <div class="winner-details">
+                <div class="winner-tag">命運選中者</div>
+                <div class="winner-name" id="winnerNameDisplay">07 吳柏翰</div>
+                <div class="winner-task" id="winnerTaskDisplay">任務：負責今日外掃區超大包垃圾清運！</div>
+              </div>
+              <button class="btn btn-sm btn-ghost" id="dismissWinnerBtn">✕</button>
+            </div>
+          </div>
+
+          <!-- Right: Wheel Setup & Candidate Pools -->
+          <div class="wheel-settings-panel">
+            <!-- Preset Tasks -->
+            <div class="card">
+              <div class="card-header">
+                <h4 class="card-title">🎯 抽籤任務目標</h4>
+              </div>
+              <div class="card-body">
+                <div class="task-selector-list" id="taskSelectorList">
+                  <label class="radio-label">
+                    <input type="radio" name="wheelTaskRadio" value="今天誰負責倒全班廚餘桶？" checked>
+                    <span>🍛 今天誰負責倒全班廚餘桶？</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="wheelTaskRadio" value="今天誰去丟外掃區大型垃圾包？">
+                    <span>🗑️ 今天誰去丟外掃區大型垃圾包？</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="wheelTaskRadio" value="今天誰負責清洗並擰乾全班拖把？">
+                    <span>🧽 今天誰負責清洗並擰乾全班拖把？</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="wheelTaskRadio" value="放學後留下來陪衛生股長做最終全校整潔驗收！">
+                    <span>👑 放學留下來陪股長最終驗收公差！</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" name="wheelTaskRadio" value="custom">
+                    <span>✏️ 自訂特別任務：</span>
+                  </label>
+                </div>
+                <input type="text" id="customTaskInput" placeholder="輸入自訂抽籤任務..." class="custom-input hidden">
+              </div>
+            </div>
+
+            <!-- Candidate Pool Selector -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h4 class="card-title">👥 轉盤候選名單 (<span id="wheelCandidateCount">8</span>人)</h4>
+                </div>
+                <div class="card-actions">
+                  <button class="btn btn-xs btn-outline" id="loadDutyPoolBtn">載入今日值日生</button>
+                  <button class="btn btn-xs btn-outline" id="loadAllPoolBtn">載入全班名單</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="text-muted small">點擊可從轉盤中剔除或加入學生：</p>
+                <div class="wheel-candidate-tags" id="wheelCandidateTags">
+                  <!-- Tag pills -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 5: RECYCLE GUIDE (智光垃圾分類圖鑑) -->
+      <!-- ============================================== -->
+      <section id="tabRecycleGuide" class="tab-panel">
+        <div class="section-header-bar">
+          <div>
+            <h2 class="section-title">智光商工 · 資源回收與環保分類標準寶典</h2>
+            <p class="section-desc">學校整潔競賽扣分最凶的就是垃圾桶混雜！掌握正確分類，助一仁拿下滿分！</p>
+          </div>
+          <div class="header-action-group">
+            <div class="search-input-wrap">
+              <input type="text" id="recycleSearchInput" placeholder="🔍 搜尋物品 (如：便當盒、吸管、珍珠奶茶杯)..." class="search-input">
+            </div>
+          </div>
+        </div>
+
+        <!-- High-School Common Pitfalls Alert Banner -->
+        <div class="alert-banner warning">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-content">
+            <h4 class="alert-title">高職校園整潔評比 · 抓違規四大地雷陷阱：</h4>
+            <div class="pitfall-grid">
+              <div class="pitfall-item">
+                <span class="pitfall-badge">地雷 1</span>
+                <strong>便當盒未沖水：</strong> 殘留油污菜渣會發臭引蟑螂，必扣大分！請至走廊水槽簡單沖洗後壓平。
+              </div>
+              <div class="pitfall-item">
+                <span class="pitfall-badge">地雷 2</span>
+                <strong>手搖飲料封膜與吸管：</strong> 膠膜與塑膠吸管屬一般垃圾，紙杯/塑膠杯必須倒光冰塊飲料再回收。
+              </div>
+              <div class="pitfall-item">
+                <span class="pitfall-badge">地雷 3</span>
+                <strong>利樂包/鋁箔包未壓扁：</strong> 鋁箔包屬紙容器，喝完請把四角拉開壓扁，節省回收桶空間。
+              </div>
+              <div class="pitfall-item">
+                <span class="pitfall-badge">地雷 4</span>
+                <strong>沾有大量油墨/複寫紙：</strong> 感熱紙收據、傳真紙、貼紙底紙不可回收，請丟一般垃圾。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recycling Categories Grid -->
+        <div class="recycle-cards-grid" id="recycleCardsGrid">
+          <!-- Dynamically filled with rich cards: 紙類, 紙容器, 寶特瓶, 鐵鋁罐, 塑膠類, 一般垃圾, 廚餘, 電池照明 -->
+        </div>
+
+        <!-- Interactive Quick Quiz Drawer -->
+        <div class="card quiz-card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <span class="card-icon">🧠</span>
+              <h3 class="card-title">衛生小達人隨堂測驗：「這個垃圾該丟哪？」</h3>
+            </div>
+            <button class="btn btn-sm btn-primary" id="startQuizBtn">來一題測驗！</button>
+          </div>
+          <div class="card-body" id="quizBody">
+            <div class="quiz-prompt">點擊按鈕來測試一仁同學的垃圾分類直覺，答對有專屬音效喔！</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 6: HISTORY & AWARDS (整潔競賽歷史紀錄) -->
+      <!-- ============================================== -->
+      <section id="tabHistory" class="tab-panel">
+        <div class="section-header-bar">
+          <div>
+            <h2 class="section-title">智光商工整潔秩序競賽 · 一仁榮譽榜與歷史日誌</h2>
+            <p class="section-desc">完整記錄每日驗收成果與各週整潔錦旗得獎歷程，打造模範班級！</p>
+          </div>
+          <div class="header-action-group">
+            <button class="btn btn-outline" id="exportDataJsonBtn">
+              <span>💾</span> 匯出備份 (JSON)
+            </button>
+            <button class="btn btn-primary" id="recordTodayLogBtn">
+              <span>📝</span> 儲存今日驗收總成績
+            </button>
+          </div>
+        </div>
+
+        <div class="history-layout">
+          <!-- Trophy Cabinet / Honor Board -->
+          <div class="card trophy-cabinet">
+            <div class="card-header">
+              <h3 class="card-title">🏆 智光商工整潔競賽 · 錦旗榮譽陳列室</h3>
+            </div>
+            <div class="card-body trophy-grid">
+              <div class="trophy-item gold">
+                <div class="trophy-icon">🥇</div>
+                <div class="trophy-name">全校整潔第一名錦旗</div>
+                <div class="trophy-season">第 3 週評比 99.2 分</div>
+              </div>
+              <div class="trophy-item silver">
+                <div class="trophy-icon">🥈</div>
+                <div class="trophy-name">一年級組第二名錦旗</div>
+                <div class="trophy-season">第 5 週評比 96.8 分</div>
+              </div>
+              <div class="trophy-item bronze">
+                <div class="trophy-icon">🥉</div>
+                <div class="trophy-name">資源回收模範班榮譽</div>
+                <div class="trophy-season">環保志工隊特優認證</div>
+              </div>
+              <div class="trophy-item target">
+                <div class="trophy-icon">🎯</div>
+                <div class="trophy-name">本週目標：蟬聯冠軍！</div>
+                <div class="trophy-season">衛生股長與一仁全員衝刺</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- History Logs Table -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📜 每日驗收歷史紀錄表</h3>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="history-table">
+                  <thead>
+                    <tr>
+                      <th>日期</th>
+                      <th>當值衛生股長</th>
+                      <th>完成度</th>
+                      <th>評分</th>
+                      <th>評等</th>
+                      <th>特別記事 / 糾察扣分備註</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyTableBody">
+                    <!-- Dynamic logs -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <span>🏫 新北市私立智光高級商工職業學校 (CKVS) · 一年仁班衛生股長室</span>
+          <span class="sep">|</span>
+          <span>乾淨一仁，人人有責 · 守護教室校園清新環境</span>
+        </div>
+        <div class="footer-right">
+          <span class="badge-tech">純前端架構 · 本機資料自動即時保存</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 1: FULLSCREEN SMARTBOARD CLEANING TIMER -->
+  <!-- ============================================== -->
+  <div class="modal-overlay hidden" id="timerModal">
+    <div class="timer-modal-window">
+      <button class="modal-close-btn" id="closeTimerModalBtn" aria-label="關閉計時器">✕</button>
+      <div class="timer-modal-header">
+        <div class="school-logo-pill">🏫 智光商工 一年仁班 · 放學打掃戰備廣播</div>
+        <h2 class="timer-modal-title">班級打掃計時專用大螢幕</h2>
+        <div class="timer-status-chip" id="modalTimerStatusChip">準備中</div>
+      </div>
+
+      <!-- Giant Digital Clock Display -->
+      <div class="giant-clock-display" id="giantClockDisplay">15:00</div>
+      
+      <!-- Progress Bar -->
+      <div class="timer-progress-track">
+        <div class="timer-progress-fill" id="timerProgressFill" style="width: 100%;"></div>
+      </div>
+
+      <!-- Quick Preset Mode Buttons -->
+      <div class="timer-presets">
+        <button class="preset-btn active" data-minutes="15">標準放學打掃 (15分鐘)</button>
+        <button class="preset-btn" data-minutes="10">晨間快速打掃 (10分鐘)</button>
+        <button class="preset-btn" data-minutes="30">期末/定期大掃除 (30分鐘)</button>
+        <button class="preset-btn" data-minutes="5">倒數衝刺檢核 (5分鐘)</button>
+      </div>
+
+      <!-- Main Controls -->
+      <div class="timer-modal-controls">
+        <button class="btn btn-lg btn-primary" id="modalTimerToggleBtn">
+          <span class="btn-icon" id="modalTimerPlayIcon">▶️</span>
+          <span id="modalTimerPlayText">開始打掃倒數</span>
+        </button>
+        <button class="btn btn-lg btn-outline" id="modalTimerResetBtn">
+          <span>🔄</span> 重設時間
+        </button>
+        <button class="btn btn-lg btn-secondary" id="modalBellSoundBtn" title="播放預備打掃鐘聲">
+          <span>🔔</span> 響起打掃鐘聲
+        </button>
+      </div>
+
+      <!-- Reminder Footer ticker -->
+      <div class="timer-bottom-reminder">
+        <span>💡 衛生股長叮嚀：倒數 3 分鐘時將響起預備鐘聲，請各組組長前來黑板講台驗收！</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 2: EDIT BULLETIN ANNOUNCEMENT -->
+  <!-- ============================================== -->
+  <div class="modal-overlay hidden" id="bulletinModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ 編輯衛生股長每日廣播公告</h3>
+        <button class="modal-close-btn" id="closeBulletinModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <label for="bulletinEditTextarea" class="form-label">公告內容 (將即時更新於首頁戰情看板)：</label>
+        <textarea id="bulletinEditTextarea" rows="6" class="form-textarea" placeholder="輸入今日整潔叮嚀與重點提醒..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancelBulletinEditBtn">取消</button>
+        <button class="btn btn-primary" id="saveBulletinEditBtn">確認發布公告</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 3: ADD/EDIT STUDENT -->
+  <!-- ============================================== -->
+  <div class="modal-overlay hidden" id="studentModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="studentModalTitle">➕ 新增班級學生</h3>
+        <button class="modal-close-btn" id="closeStudentModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="studentSeatInput" class="form-label">座號 (數字)：</label>
+          <input type="number" id="studentSeatInput" class="form-input" min="1" max="99" placeholder="例如：41">
+        </div>
+        <div class="form-group">
+          <label for="studentNameInput" class="form-label">學生姓名：</label>
+          <input type="text" id="studentNameInput" class="form-input" placeholder="例如：王小明">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancelStudentModalBtn">取消</button>
+        <button class="btn btn-primary" id="saveStudentModalBtn">儲存學生</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 4: RECORD TODAY'S LOG -->
+  <!-- ============================================== -->
+  <div class="modal-overlay hidden" id="recordLogModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">📝 儲存今日驗收總成績至歷史紀錄</h3>
+        <button class="modal-close-btn" id="closeRecordLogModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">今日日期：</label>
+          <input type="date" id="recordLogDate" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">驗收衛生股長姓名：</label>
+          <input type="text" id="recordLogOfficer" class="form-input" value="衛生股長">
+        </div>
+        <div class="form-group">
+          <label class="form-label">評定總分 (0 ~ 100)：</label>
+          <input type="number" id="recordLogScore" class="form-input" min="0" max="100" value="98">
+        </div>
+        <div class="form-group">
+          <label class="form-label">特別記事 / 評比備註：</label>
+          <textarea id="recordLogNotes" class="form-textarea" rows="3" placeholder="例如：全區驗收全數 PASS，外掃區乾淨無落葉，黑板板溝吸塵徹底。"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="cancelRecordLogBtn">取消</button>
+        <button class="btn btn-primary" id="saveRecordLogBtn">寫入紀錄簿</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio elements helper or Web Audio notification chime -->
+  <!-- App JS -->
+  <script src="app.js"></script>
+</body>
+</html>
